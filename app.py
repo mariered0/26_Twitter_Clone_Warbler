@@ -6,7 +6,7 @@ from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
 from forms import UserAddForm, LoginForm, MessageForm, ProfileEditForm
-from models import db, connect_db, User, Message
+from models import db, connect_db, User, Message, Likes
 
 CURR_USER_KEY = "curr_user"
 
@@ -158,6 +158,20 @@ def users_show(user_id):
                 .all())
     return render_template('users/show.html', user=user, messages=messages)
 
+@app.route('/users/<int:user_id>/likes')
+def users_likes(user_id):
+    """Show msgs that user liked."""
+
+    user = User.query.get_or_404(user_id)
+    likes = [like.id for like in user.likes]
+
+    messages = (Message
+                .query
+                .filter(Message.user_id == user_id)
+                .order_by(Message.timestamp.desc())
+                .limit(100)
+                .all())
+    return render_template('users/likes.html', user=user, messages=messages, likes=likes)
 
 @app.route('/users/<int:user_id>/following')
 def show_following(user_id):
@@ -263,6 +277,46 @@ def delete_user():
     return redirect("/signup")
 
 
+# def add_like_db(msg_id, likes, messages, user):
+#         if msg_id not in likes and msg_id not in messages:
+#         like = Likes(user_id=user.id, message_id=msg_id)
+#         db.session.add(like)
+#         db.session.commit()
+
+# def remove_like_db(msg>id, likes, messages, user):
+#         if msg_id in likes and msg_id not in messages:
+#         like = Likes.query.filter_by(message_id=msg_id).first()
+#         db.session.delete(like)
+#         db.session.commit()
+
+@app.route('/users/add_like/<int:msg_id>', methods=["GET", "POST"])
+def add_like(msg_id):
+    """Add like to a message."""
+
+    user = g.user
+    likes = [like.id for like in user.likes]
+    messages = [message.id for message in user.messages]
+
+    # if the user hasn't liked the msg yet and is not their own msg, then like the msg.
+
+    if msg_id not in likes and msg_id not in messages:
+        like = Likes(user_id=user.id, message_id=msg_id)
+        db.session.add(like)
+        db.session.commit()
+
+        return redirect('/')
+
+    # if the user has liked the msg already and is not their own msg, then unlike the msg.
+    elif msg_id in likes and msg_id not in messages:
+        
+        like = Likes.query.filter_by(message_id=msg_id).first()
+        db.session.delete(like)
+        db.session.commit()
+
+        return redirect('/')
+
+
+
 ##############################################################################
 # Messages routes:
 
@@ -312,6 +366,8 @@ def messages_destroy(message_id):
     return redirect(f"/users/{g.user.id}")
 
 
+
+
 ##############################################################################
 # Homepage and error pages
 
@@ -323,15 +379,20 @@ def homepage():
     - anon users: no messages
     - logged in: 100 most recent messages of followed_users
     """
+    user = g.user
+    following_users = [followed_user.id for followed_user in user.following]
+    #The list of msgs the user liked. This list will be checked through to determine the color of the like icons.
+    likes = [like.id for like in user.likes]
 
     if g.user:
         messages = (Message
                     .query
+                    .filter(Message.user_id.in_(following_users))
                     .order_by(Message.timestamp.desc())
                     .limit(100)
                     .all())
 
-        return render_template('home.html', messages=messages)
+        return render_template('home.html', messages=messages, likes=likes)
 
     else:
         return render_template('home-anon.html')
