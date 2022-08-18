@@ -255,9 +255,9 @@ def profile():
             return redirect(f'/users/{user.id}')
         
         flash('Password is incorrect.', 'danger')
-        return render_template('/users/edit.html', form=form)
+        return render_template('/users/edit.html', form=form, user=user)
 
-    return render_template('/users/edit.html', form=form)
+    return render_template('/users/edit.html', form=form, user=user)
 
 
 
