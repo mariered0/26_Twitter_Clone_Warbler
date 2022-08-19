@@ -1,7 +1,7 @@
 import os
 import pdb
 
-from flask import Flask, render_template, request, flash, redirect, session, g
+from flask import Flask, render_template, request, flash, redirect, session, g, abort
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
@@ -161,17 +161,13 @@ def users_show(user_id):
 @app.route('/users/<int:user_id>/likes')
 def users_likes(user_id):
     """Show msgs that user liked."""
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
 
     user = User.query.get_or_404(user_id)
-    likes = [like.id for like in user.likes]
 
-    messages = (Message
-                .query
-                .filter(Message.user_id == user_id)
-                .order_by(Message.timestamp.desc())
-                .limit(100)
-                .all())
-    return render_template('users/likes.html', user=user, messages=messages, likes=likes)
+    return render_template('users/likes.html', user=user)
 
 @app.route('/users/<int:user_id>/following')
 def show_following(user_id):
@@ -241,12 +237,12 @@ def profile():
 
     if form.validate_on_submit():
     
-        if User.authenticate(form.username.data, form.password.data):
+        if User.authenticate(user.username, form.password.data):
 
             user.username = form.username.data
             user.email = form.email.data
-            user.image_url = form.image_url.data
-            user.header_image_url = form.header_image_url.data
+            user.image_url = form.image_url.data or '/static/images/default-pic.png'
+            user.header_image_url = form.header_image_url.data or '/static/images/warbler-hero.jpg'
             user.location = form.location.data
             user.bio = form.bio.data
             db.session.commit()
@@ -255,7 +251,6 @@ def profile():
             return redirect(f'/users/{user.id}')
         
         flash('Password is incorrect.', 'danger')
-        return render_template('/users/edit.html', form=form, user=user)
 
     return render_template('/users/edit.html', form=form, user=user)
 
@@ -289,31 +284,29 @@ def delete_user():
 #         db.session.delete(like)
 #         db.session.commit()
 
-@app.route('/users/add_like/<int:msg_id>', methods=["GET", "POST"])
+@app.route('/users/add_like/<int:msg_id>', methods=["POST"])
 def add_like(msg_id):
-    """Add like to a message."""
+    """Add like/remove like to/from a message."""
 
-    user = g.user
-    likes = [like.id for like in user.likes]
-    messages = [message.id for message in user.messages]
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
 
-    # if the user hasn't liked the msg yet and is not their own msg, then like the msg.
+    liked_message = Message.query.get_or_404(msg_id)
+    if liked_message.user_id == g.user:
+        return abort(403)
 
-    if msg_id not in likes and msg_id not in messages:
-        like = Likes(user_id=user.id, message_id=msg_id)
-        db.session.add(like)
-        db.session.commit()
+    user_likes = g.user.likes
+    
+# if the msg was already in user_likes, remove from the list, otherwise, include in the list.
+    if liked_message in user_likes:
+        g.user.likes = [like for like in user_likes if like != liked_message]
 
-        return redirect('/')
+    else:
+        g.user.likes.append(liked_message)
 
-    # if the user has liked the msg already and is not their own msg, then unlike the msg.
-    elif msg_id in likes and msg_id not in messages:
-        
-        like = Likes.query.filter_by(message_id=msg_id).first()
-        db.session.delete(like)
-        db.session.commit()
-
-        return redirect('/')
+    db.session.commit()
+    return redirect('/')
 
 
 
