@@ -1,35 +1,37 @@
 {% extends 'users/detail.html' %}
 {% block user_details %}
-  <div class="col-sm-6">
-    <ul class="list-group" id="messages">
+<div class="col-sm-6">
+  <ul class="list-group" id="messages">
 
-      {% for msg in user.likes %}
+    {% for msg in user.likes %}
 
-        <li class="list-group-item">
-          <a href="/messages/{{ msg.id }}" class="message-link"/>
+    <li class="list-group-item">
+      <a href="/messages/{{ msg.id }}" class="message-link" />
 
-          <a href="/messages/{{ msg.id }}">
-            <img src="{{ msg.user.image_url }}" alt="user image" class="timeline-image">
-          </a>
+      <a href="/messages/{{ msg.id }}">
+        <img src="{{ msg.user.image_url }}" alt="user image" class="timeline-image">
+      </a>
 
-          <div class="message-area">
-            <a href="/users/{{ msg.user.id }}">@{{ msg.user.username }}</a>
-            <span class="text-muted">{{ msg.timestamp.strftime('%d %B %Y') }}</span>
-            <p>{{ msg.text }}</p>
-          </div>
-          <!-- <form method="POST" action="/users/add_like/{{ msg.id }}" id="messages-form">
-            <button class="
+      <div class="message-area">
+        <a href="/users/{{ msg.user.id }}">@{{ msg.user.username }}</a>
+        <span class="text-muted">{{ msg.timestamp.strftime('%d %B %Y') }}</span>
+        <p>{{ msg.text }}</p>
+      </div>
+
+      {% if user.id == g.user.id %}
+      <form method="POST" action="/users/add_like/{{ msg.id }}" class="messages-form">
+        <button class="
               btn 
               btn-sm 
-              {{'btn-primary' if msg.id in likes else 'btn-secondary'}}"
-            >
-              <i class="fa fa-thumbs-up"></i> 
-            </button>
-          </form> -->
-        </li>
+              {{'btn-primary'}}">
+          <i class="fa fa-thumbs-up"></i>
+        </button>
+      </form>
+      {% endif %}
+    </li>
 
-      {% endfor %}
+    {% endfor %}
 
-    </ul>
-  </div>
+  </ul>
+</div>
 {% endblock %}

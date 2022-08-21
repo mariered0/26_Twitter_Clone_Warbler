@@ -51,7 +51,8 @@
               <span class="text-muted">{{ msg.timestamp.strftime('%d %B %Y') }}</span>
               <p>{{ msg.text }}</p>
             </div>
-            <form method="POST" action="/users/add_like/{{ msg.id }}" id="messages-form">
+            {% if g.user.id != msg.user.id %}
+            <form method="POST" action="/users/add_like/{{ msg.id }}" class="messages-form">
               <button class="
                 btn 
                 btn-sm 
@@ -60,6 +61,7 @@
                 <i class="fa fa-thumbs-up"></i> 
               </button>
             </form>
+            {% endif %}
           </li>
         {% endfor %}
       </ul>

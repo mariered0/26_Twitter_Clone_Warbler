@@ -272,18 +272,6 @@ def delete_user():
     return redirect("/signup")
 
 
-# def add_like_db(msg_id, likes, messages, user):
-#         if msg_id not in likes and msg_id not in messages:
-#         like = Likes(user_id=user.id, message_id=msg_id)
-#         db.session.add(like)
-#         db.session.commit()
-
-# def remove_like_db(msg>id, likes, messages, user):
-#         if msg_id in likes and msg_id not in messages:
-#         like = Likes.query.filter_by(message_id=msg_id).first()
-#         db.session.delete(like)
-#         db.session.commit()
-
 @app.route('/users/add_like/<int:msg_id>', methods=["POST"])
 def add_like(msg_id):
     """Add like/remove like to/from a message."""
@@ -372,12 +360,14 @@ def homepage():
     - anon users: no messages
     - logged in: 100 most recent messages of followed_users
     """
-    user = g.user
-    following_users = [followed_user.id for followed_user in user.following]
+   
     #The list of msgs the user liked. This list will be checked through to determine the color of the like icons.
-    likes = [like.id for like in user.likes]
 
     if g.user:
+        user = g.user
+        following_users = [followed_user.id for followed_user in user.following] + [user.id]
+
+        likes = [like.id for like in user.likes]
         messages = (Message
                     .query
                     .filter(Message.user_id.in_(following_users))
